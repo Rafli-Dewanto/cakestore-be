@@ -9,23 +9,18 @@ This is a Cake Store API built with Go using Fiber as the web framework and GORM
 - Unit testing with SQLite.
 
 ## Prerequisites
-- [Go](https://go.dev/doc/install) (v1.18+)
+- [Go](https://go.dev/doc/install) (v1.22+)
 - [Docker](https://www.docker.com/get-started)
 
 ## Setup & Installation
 
 ### 1. Clone the repository
 ```sh
-git clone https://github.com/yourusername/cakestore.git
-cd cakestore
+git clone https://github.com/Rafli-Dewanto/cakestore-be.git
+cd cakestore-be
 ```
 
-### 2. Run MySQL with Docker
-```sh
-docker compose up -d
-```
-
-### 3. Create a `.env` file
+### 2. Create a `.env` file
 ```sh
 touch .env
 ```
@@ -35,6 +30,12 @@ MYSQL_ROOT_PASSWORD=password
 MYSQL_DATABASE=cakestore
 MYSQL_PORT=3306
 MYSQL_USER=root
+MYSQL_HOST=db
+```
+
+### 3. Run with Docker
+```sh
+docker compose up -d --build
 ```
 
 ### 4. Install dependencies
@@ -42,17 +43,12 @@ MYSQL_USER=root
 go mod tidy
 ```
 
-### 5. Run database migrations
-```sh
-go run main.go migrate
-```
-
-### 6. Start the application
+### 5. Start the application
 ```sh
 go run main.go
 ```
 
-The API will be available at `http://localhost:3000`.
+The API will be available at `http://localhost:8080`.
 
 ## API Endpoints
 
@@ -66,7 +62,7 @@ The API will be available at `http://localhost:3000`.
 
 ### Example Request: Create Cake
 ```sh
-curl -X POST http://localhost:3000/cakes -H "Content-Type: application/json" -d '{
+curl -X POST http://localhost:8080/cakes -H "Content-Type: application/json" -d '{
   "title": "Chocolate Cake",
   "description": "Delicious chocolate cake",
   "rating": 4,
@@ -85,18 +81,6 @@ go test ./...
 To run tests with detailed output:
 ```sh
 go test -v ./...
-```
-
-## Docker Support
-
-### Build Docker Image
-```sh
-docker build -t cakestore-api .
-```
-
-### Run Container
-```sh
-docker run -p 3000:3000 --name cakestore-api --env-file .env cakestore-api
 ```
 
 ## License
