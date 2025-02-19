@@ -4,6 +4,7 @@ import (
 	"cakestore/internal/entity"
 	"cakestore/internal/repository"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,14 +17,16 @@ type CakeUseCase interface {
 }
 
 type cakeUseCase struct {
-	repo   repository.CakeRepository
-	logger *logrus.Logger
+	repo     repository.CakeRepository
+	logger   *logrus.Logger
+	validate *validator.Validate
 }
 
 func NewCakeUseCase(repo repository.CakeRepository, logger *logrus.Logger) CakeUseCase {
 	return &cakeUseCase{
-		repo:   repo,
-		logger: logger,
+		repo:     repo,
+		logger:   logger,
+		validate: validator.New(),
 	}
 }
 
@@ -48,8 +51,12 @@ func (uc *cakeUseCase) GetCakeByID(id int) (*entity.Cake, error) {
 }
 
 func (uc *cakeUseCase) CreateCake(cake *entity.Cake) error {
-	err := uc.repo.Create(cake)
-	if err != nil {
+	if err := uc.validate.Struct(cake); err != nil {
+		uc.logger.Errorf("Validation failed for cake: %v", err)
+		return err
+	}
+
+	if err := uc.repo.Create(cake); err != nil {
 		uc.logger.Errorf("Error creating cake: %v", err)
 		return err
 	}
@@ -58,8 +65,12 @@ func (uc *cakeUseCase) CreateCake(cake *entity.Cake) error {
 }
 
 func (uc *cakeUseCase) UpdateCake(cake *entity.Cake) error {
-	err := uc.repo.UpdateCake(cake)
-	if err != nil {
+	if err := uc.validate.Struct(cake); err != nil {
+		uc.logger.Errorf("Validation failed for cake: %v", err)
+		return err
+	}
+
+	if err := uc.repo.UpdateCake(cake); err != nil {
 		uc.logger.Errorf("Error updating cake: %v", err)
 		return err
 	}
@@ -68,8 +79,7 @@ func (uc *cakeUseCase) UpdateCake(cake *entity.Cake) error {
 }
 
 func (uc *cakeUseCase) DeleteCake(id int) error {
-	err := uc.repo.Delete(id)
-	if err != nil {
+	if err := uc.repo.Delete(id); err != nil {
 		uc.logger.Errorf("Error deleting cake with ID %d: %v", id, err)
 		return err
 	}

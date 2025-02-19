@@ -7,8 +7,10 @@ import (
 	"database/sql"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
 )
@@ -16,12 +18,14 @@ import (
 type CakeController struct {
 	cakeUseCase usecase.CakeUseCase
 	logger      *logrus.Logger
+	validator   *validator.Validate
 }
 
 func NewCakeController(cakeUseCase usecase.CakeUseCase, logger *logrus.Logger) *CakeController {
 	return &CakeController{
 		cakeUseCase: cakeUseCase,
 		logger:      logger,
+		validator:   validator.New(),
 	}
 }
 
@@ -64,11 +68,14 @@ func (c *CakeController) GetCakeByID(ctx *fiber.Ctx) error {
 }
 
 func (c *CakeController) CreateCake(ctx *fiber.Ctx) error {
-	// Parse the request body
 	var request model.CreateUpdateCakeRequest
 	if err := ctx.BodyParser(&request); err != nil {
 		c.logger.Error("Failed to parse body: ", err)
 		return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{"message": "Invalid request body"})
+	}
+
+	if err := c.validatePayload(request); err != nil {
+		return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{"message": err.Error()})
 	}
 
 	cake := &entity.Cake{
@@ -76,8 +83,8 @@ func (c *CakeController) CreateCake(ctx *fiber.Ctx) error {
 		Description: request.Description,
 		Rating:      float64(request.Rating),
 		Image:       request.ImageURL,
-		CreatedAt:   time.Now(),    
-		UpdatedAt:   time.Now(),    
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 		DeletedAt:   sql.NullTime{},
 	}
 
@@ -97,20 +104,23 @@ func (c *CakeController) UpdateCake(ctx *fiber.Ctx) error {
 	if err := ctx.BodyParser(&request); err != nil {
 		return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{"message": "Invalid request body"})
 	}
-	cakeToUpdate, err := strconv.Atoi(ctx.Params("id")) 
+
+	if err := c.validatePayload(request); err != nil {
+		return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{"message": err.Error()})
+	}
+
+	cakeID, err := strconv.Atoi(ctx.Params("id"))
 	if err != nil {
 		return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{"message": "Invalid cake ID"})
 	}
 
 	cake := &entity.Cake{
-		ID:          cakeToUpdate,
+		ID:          cakeID,
 		Title:       request.Title,
 		Description: request.Description,
 		Rating:      float64(request.Rating),
 		Image:       request.ImageURL,
-		CreatedAt:   time.Now(),    
-		UpdatedAt:   time.Now(),    
-		DeletedAt:   sql.NullTime{},
+		UpdatedAt:   time.Now(),
 	}
 
 	if err := c.cakeUseCase.UpdateCake(cake); err != nil {
@@ -142,4 +152,16 @@ func (c *CakeController) DeleteCake(ctx *fiber.Ctx) error {
 	return ctx.JSON(fiber.Map{
 		"message": "Cake deleted successfully",
 	})
+}
+
+func (c *CakeController) validatePayload(request model.CreateUpdateCakeRequest) error {
+	if err := c.validator.Struct(request); err != nil {
+		validationErrors := err.(validator.ValidationErrors)
+		errMessages := make([]string, len(validationErrors))
+		for i, e := range validationErrors {
+			errMessages[i] = "Field '" + e.Field() + "' failed on '" + e.Tag() + "' rule"
+		}
+		return fiber.NewError(http.StatusBadRequest, "Validation failed: " + strings.Join(errMessages, ", "))
+	}
+	return nil
 }
