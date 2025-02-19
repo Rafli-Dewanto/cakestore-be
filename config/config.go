@@ -16,6 +16,6 @@ func LoadConfig() *Config {
 		DBPassword: viper.GetString("MYSQL_ROOT_PASSWORD"),
 		DBUser:     viper.GetString("MYSQL_USER"),
 		DBPort:     viper.GetString("MYSQL_PORT"),
-		DBHost:     "127.0.0.1",
+		DBHost:     viper.GetString("MYSQL_HOST"),
 	}
 }

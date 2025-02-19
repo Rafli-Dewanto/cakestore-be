@@ -4,6 +4,7 @@ import (
 	configs "cakestore/config"
 	controller "cakestore/internal/delivery/http"
 	"cakestore/internal/delivery/http/route"
+	"cakestore/internal/entity"
 	"cakestore/internal/repository"
 	"cakestore/internal/usecase"
 	"cakestore/utils"
@@ -33,6 +34,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("❌ Failed to connect to database: %v", err)
 	}
+
+	log.Println("🔄 Running database migrations...")
+	err = db.AutoMigrate(
+		&entity.Cake{},
+	)
+	if err != nil {
+		log.Fatalf("❌ Failed to run database migrations: %v", err)
+	}
+	log.Println("✅ Database migrations completed successfully")
 
 	app := fiber.New()
 
