@@ -4,6 +4,7 @@ import (
 	http "cakestore/internal/delivery/http"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 )
 
 type RouteConfig struct {
@@ -17,6 +18,12 @@ func (c *RouteConfig) Setup() {
 
 func (c *RouteConfig) SetupRoute() {
 	api := c.App.Group("/cakes")
+	c.App.Use(cors.Config{
+		AllowOrigins:     "*",
+		AllowMethods:     "GET,POST,PUT,DELETE",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+		AllowCredentials: true,
+	})
 
 	api.Get("/", c.CakeController.GetAllCakes)
 	api.Get("/:id", c.CakeController.GetCakeByID)
