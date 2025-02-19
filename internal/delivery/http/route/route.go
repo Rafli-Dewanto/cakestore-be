@@ -19,10 +19,9 @@ func (c *RouteConfig) Setup() {
 func (c *RouteConfig) SetupRoute() {
 	api := c.App.Group("/cakes")
 	c.App.Use(cors.New(cors.Config{
-		AllowOrigins:     "*",
-		AllowMethods:     "GET,POST,PUT,DELETE",
-		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
-		AllowCredentials: true,
+		AllowOrigins: "*",
+		AllowMethods: "GET,POST,PUT,DELETE",
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 	}))
 
 	api.Get("/", c.CakeController.GetAllCakes)
