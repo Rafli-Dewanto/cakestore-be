@@ -3,6 +3,8 @@ package entity
 import (
 	"database/sql"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type Cake struct {
@@ -14,6 +16,16 @@ type Cake struct {
 	CreatedAt   time.Time    `gorm:"column:created_at"`
 	UpdatedAt   time.Time    `gorm:"column:updated_at"`
 	DeletedAt   sql.NullTime `gorm:"column:deleted_at"`
+	IsDeleted   bool         `gorm:"column:is_deleted"`
+}
+
+func (c *Cake) AfterFind(tx *gorm.DB) (err error) {
+	if c.IsDeleted {
+		c.IsDeleted = true
+	} else {
+		c.IsDeleted = false
+	}
+	return nil
 }
 
 func (a *Cake) TableName() string {

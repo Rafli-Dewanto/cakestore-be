@@ -4,6 +4,7 @@ import (
 	"cakestore/internal/entity"
 	"cakestore/internal/model"
 	"cakestore/internal/usecase"
+	"cakestore/utils"
 	"database/sql"
 	"net/http"
 	"strconv"
@@ -30,12 +31,14 @@ func NewCakeController(cakeUseCase usecase.CakeUseCase, logger *logrus.Logger) *
 }
 
 func (c *CakeController) GetAllCakes(ctx *fiber.Ctx) error {
+	resp := new(utils.Response)
+
 	cakes, err := c.cakeUseCase.GetAllCakes()
 	if err != nil {
 		c.logger.Errorf("Failed to fetch cakes: %v", err)
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to fetch cakes",
-		})
+		resp.Message = "Failed to fetch cakes"
+		resp.Success = false
+		return ctx.Status(fiber.StatusInternalServerError).JSON(resp)
 	}
 
 	cakeResponses := make([]*model.CakeModel, len(cakes))
@@ -43,39 +46,51 @@ func (c *CakeController) GetAllCakes(ctx *fiber.Ctx) error {
 		cakeResponses[i] = model.CakeToResponse(&cake)
 	}
 
-	return ctx.JSON(fiber.Map{
-		"data": cakeResponses,
-	})
+	resp.Data = cakeResponses
+	resp.Success = true
+	resp.Message = "Cakes fetched successfully"
+	return ctx.JSON(resp)
 }
 
 func (c *CakeController) GetCakeByID(ctx *fiber.Ctx) error {
+	resp := new(utils.Response)
+
 	id, err := strconv.Atoi(ctx.Params("id"))
 	if err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid cake ID",
-		})
+		resp.Message = "Invalid cake ID"
+		resp.Success = false
+		return ctx.Status(fiber.StatusBadRequest).JSON(resp)
 	}
 
 	cake, err := c.cakeUseCase.GetCakeByID(id)
 	if err != nil {
 		c.logger.Errorf("Failed to get cake: %v", err)
-		return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "Cake not found",
-		})
+		resp.Message = "Cake not found"
+		resp.Success = false
+		return ctx.Status(fiber.StatusNotFound).JSON(resp)
 	}
 
-	return ctx.JSON(model.CakeToResponse(cake))
+	resp.Data = model.CakeToResponse(cake)
+	resp.Message = "Cake fetched successfully"
+	resp.Success = true
+	return ctx.JSON(resp)
 }
 
 func (c *CakeController) CreateCake(ctx *fiber.Ctx) error {
+	resp := new(utils.Response)
+
 	var request model.CreateUpdateCakeRequest
 	if err := ctx.BodyParser(&request); err != nil {
 		c.logger.Error("Failed to parse body: ", err)
-		return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{"message": "Invalid request body"})
+		resp.Message = "Invalid request body"
+		resp.Success = false
+		return ctx.Status(http.StatusBadRequest).JSON(resp)
 	}
 
 	if err := c.validatePayload(request); err != nil {
-		return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{"message": err.Error()})
+		resp.Message = err.Error()
+		resp.Success = false
+		return ctx.Status(http.StatusBadRequest).JSON(resp)
 	}
 
 	cake := &entity.Cake{
@@ -90,28 +105,38 @@ func (c *CakeController) CreateCake(ctx *fiber.Ctx) error {
 
 	if err := c.cakeUseCase.CreateCake(cake); err != nil {
 		c.logger.Error("Failed to create cake: ", err)
-		return ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to create cake"})
+		resp.Message = "Failed to create cake"
+		resp.Success = false
+		return ctx.Status(http.StatusInternalServerError).JSON(resp)
 	}
 
-	return ctx.Status(http.StatusOK).JSON(fiber.Map{
-		"message": "Cake created successfully",
-		"data":    model.CakeToResponse(cake),
-	})
+	resp.Success = true
+	resp.Message = "Cake created successfully"
+	resp.Data = model.CakeToResponse(cake)
+	return ctx.Status(http.StatusOK).JSON(resp)
 }
 
 func (c *CakeController) UpdateCake(ctx *fiber.Ctx) error {
+	resp := new(utils.Response)
+
 	var request model.CreateUpdateCakeRequest
 	if err := ctx.BodyParser(&request); err != nil {
-		return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{"message": "Invalid request body"})
+		resp.Message = "Invalid request body"
+		resp.Success = false
+		return ctx.Status(http.StatusBadRequest).JSON(resp)
 	}
 
 	if err := c.validatePayload(request); err != nil {
-		return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{"message": err.Error()})
+		resp.Message = err.Error()
+		resp.Success = false
+		return ctx.Status(http.StatusBadRequest).JSON(resp)
 	}
 
 	cakeID, err := strconv.Atoi(ctx.Params("id"))
 	if err != nil {
-		return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{"message": "Invalid cake ID"})
+		resp.Message = "Invalid cake ID"
+		resp.Success = false
+		return ctx.Status(http.StatusBadRequest).JSON(resp)
 	}
 
 	cake := &entity.Cake{
@@ -125,33 +150,38 @@ func (c *CakeController) UpdateCake(ctx *fiber.Ctx) error {
 
 	if err := c.cakeUseCase.UpdateCake(cake); err != nil {
 		c.logger.Error("Failed to update cake: ", err)
-		return ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to update cake"})
+		resp.Message = "Failed to update cake"
+		resp.Success = false
+		return ctx.Status(http.StatusInternalServerError).JSON(resp)
 	}
-	return ctx.Status(http.StatusOK).JSON(fiber.Map{
-		"message": "Cake updated successfully",
-		"data":    model.CakeToResponse(cake),
-	})
+	
+	resp.Success = true
+	resp.Message = "Cake updated successfully"
+	resp.Data = model.CakeToResponse(cake)
+	return ctx.Status(http.StatusOK).JSON(resp)
 }
 
 func (c *CakeController) DeleteCake(ctx *fiber.Ctx) error {
+	resp := new(utils.Response)
+
 	id, err := strconv.Atoi(ctx.Params("id"))
 	if err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid cake ID",
-		})
+		resp.Message = "Invalid cake ID"
+		resp.Success = false
+		return ctx.Status(fiber.StatusBadRequest).JSON(resp)
 	}
 
 	err = c.cakeUseCase.DeleteCake(id)
 	if err != nil {
 		c.logger.Errorf("Failed to delete cake: %v", err)
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to delete cake",
-		})
+		resp.Message = "Failed to delete cake"
+		resp.Success = false
+		return ctx.Status(fiber.StatusInternalServerError).JSON(resp)
 	}
 
-	return ctx.JSON(fiber.Map{
-		"message": "Cake deleted successfully",
-	})
+	resp.Success = true
+	resp.Message = "Cake deleted successfully"
+	return ctx.JSON(resp)
 }
 
 func (c *CakeController) validatePayload(request model.CreateUpdateCakeRequest) error {
@@ -161,7 +191,7 @@ func (c *CakeController) validatePayload(request model.CreateUpdateCakeRequest) 
 		for i, e := range validationErrors {
 			errMessages[i] = "Field '" + e.Field() + "' failed on '" + e.Tag() + "' rule"
 		}
-		return fiber.NewError(http.StatusBadRequest, "Validation failed: " + strings.Join(errMessages, ", "))
+		return fiber.NewError(http.StatusBadRequest, "Validation failed: "+strings.Join(errMessages, ", "))
 	}
 	return nil
 }
